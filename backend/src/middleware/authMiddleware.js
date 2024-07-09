@@ -32,3 +32,15 @@ export const protect = expressAsyncHandler (async (req, res, next) => {
     res.status (401).json ({message: 'Du musst angemeldet sein'});
   }
 });
+
+
+// admin middleware
+export const adminMiddleware = expressAsyncHandler (async (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    // if user is admin continue
+    next ();
+    return;
+  }
+  // if not admin send 403 forbidden
+  res.status (403).json ({message: 'Nicht berechtigt'});
+});

@@ -1,5 +1,33 @@
-const server = () => {
-    console.log("server is running...");
-}
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
 
-server();
+dotenv.config ();
+
+const port = process.env.PORT || 8000;
+
+const app = express ();
+
+// middleware
+app.use(
+    cors({
+      origin: process.env.CLIENT_URL,
+      credentials: true,
+    })
+  );
+
+app.use (express.json ());
+app.use (express.urlencoded ({extended: true}));
+
+const server = () => {
+  try {
+    app.listen (port, () => {
+      console.log (`Server started on port ${port}`);
+    });
+  } catch (error) {
+    console.log ('Failed to start server...', error.message);
+    process.exit (1);
+  }
+};
+
+server ();

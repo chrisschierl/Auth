@@ -127,3 +127,10 @@ export const loginUser = asyncHandler (async (req, res) => {
     .json ({message: 'Fehler beim Einloggen!'});
   }
 });
+
+// logout user
+
+export const logoutUser = asyncHandler (async (req, res) => {
+  res.clearCookie ('token');
+  res.status (200).json ({message: 'Dein Account wurde abgemeldet'});
+});

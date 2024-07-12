@@ -304,11 +304,109 @@ export const verifyUser = asyncHandler (async (req, res) => {
   const user = await User.findOne (userToken.userId);
   if (user.isVerified) {
     // 400 Bad Request
-    return res.status(400).json ({message: 'Account ist bereits verifiziert'});
+    return res.status (400).json ({message: 'Account ist bereits verifiziert'});
   }
 
   // user mit ID aus der Datenbank aktualisieren
   user.isVerified = true;
   await user.save ();
   res.status (200).json ({message: 'Account wurde erfolgreich verifiziert'});
+});
+
+
+// forgot password
+export const forgotPassword = asyncHandler (async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res
+    .status(400)
+    .json({ message: 'Füge deine Email hinzu' });
+  }
+
+  // checken ob der user existiert
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    // 404 Not Found
+    return res
+      .status(404)
+      .json({ message: 'Dieser Account existiert nicht' });
+  }
+
+  // checken ob der token existiert
+  let token = await Token.findOne({ userId: user._id });
+
+  // falls der token existiert, wird er gelöscht
+  if (token) {
+    await token.deleteOne();
+  }
+
+  // reset token erstellen mit der user ID ---> läuft nach 1 Stunde ab
+  const passwordResetToken = crypto.randomBytes(64).toString('hex') + user._id;
+
+  // Reset token hashen
+  const hashedToken = hashToken(passwordResetToken);
+
+  await new Token({
+    userId: user._id,
+    token: hashedToken,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 60 * 60 * 1000, // 1 Stunde 
+  }).save();
+
+  // Reset link erstellen
+  const resetLink = `${process.env.CLIENT_URL}/reset-password/${passwordResetToken}`;
+
+  // Dem User eine E-Mail senden
+  const subject = 'Automatisch: Passwort vergessen?';
+  const send_to = user.email;
+  const sent_from = process.env.USER_EMAIL;
+  const reply_to = 'noreply@gmail.com';
+  const template = 'forgotPassword';
+  const send_from = process.env.USER_EMAIL;
+  const name = user.name;
+  const url = resetLink;
+
+  try {
+    await sendEmail(
+      subject,
+      send_to,
+      send_from,
+      reply_to,
+      template,
+      name,
+      url
+    );
+    res.json({ message: "E-Mail wurde gesendet. Bitte folge den Anweisungen zur Passwortzurücksetzung" });
+  } catch (error) {
+    console.log("Fehler beim Senden der E-Mail...", error);
+    return res
+    .status(500)
+    .json ({ message: "E-Mail konnte nicht versendet werden" });
+  }
+});
+
+// reset password
+export const resetPassword = asyncHandler (async (req, res) => {
+  const { resetPasswordToken} = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    return res
+      .status(400)
+      .json({ message: 'Füge dein neues Passwort hinzu' });
+  }
+
+  // hash des verifizierten reset tokens
+
+  const hashedToken = hashToken(resetPasswordToken);
+
+  // check ob der verifizierungs token existiert
+  const userToken = await Token.findOne({
+    passwordResetToken: hashedToken,
+    // check ob der verifizierungs token abgelaufen ist
+    expiresAt: {$gt: Date.now()},
+  });
+
 });

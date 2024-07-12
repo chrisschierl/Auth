@@ -8,6 +8,8 @@ import {
   userLoginStatus,
   verifyEmail,
   verifyUser,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/auth/userController.js';
 import {
   adminMiddleware,
@@ -43,5 +45,10 @@ router.post('/verify-email', protect, verifyEmail);
 // verify user ---> Email verifizieren
 router.post("/verify-user/:verificationToken", verifyUser);
 
+// forgot password
+router.post ('/forgot-password', forgotPassword);
+
+//reset password
+router.post("/reset-password/:resetPasswordToken", resetPassword);
 
 export default router;

@@ -14,7 +14,7 @@ const TokenSchema = new mongoose.Schema({
 
   passwordResetToken: {
     type: String,
-    default: "",
+    required: true,
   },
 
   createdAt: {

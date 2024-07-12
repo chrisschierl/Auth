@@ -222,24 +222,15 @@ export const verifyEmail = asyncHandler (async (req, res) => {
   // hash des verifizierungs tokens
   const hashedToken = hashToken (verificationToken);
 
-  console.log (`generated Token: ${verificationToken}`);
-  console.log (`hashed Token: ${hashedToken}`);
 
+  // Token in der Datenbank speichern
   await new Token ({
     userId: user._id,
     verificationToken: hashedToken,
     createdAt: Date.now (),
     // 24 Stunden in Millisekunden // 24 Stunden * 60 Minuten * 60 Sekunden * 1000 Millisekunden = 86400000 Millisekunden
     expiresAt: Date.now () + 24 * 60 * 60 * 1000,
-  }); //.save ();
-
-  // try {
-  //   const savedToken = await newToken.save();
-  //   console.log('Token saved:', savedToken);
-  // } catch (error) {
-  //   console.error('Error saving token:', error);
-  //   return res.status(500).json({ message: 'Fehler beim Speichern des Tokens' });
-  // }
+  }).save ();
 
   // verification link
   const verificationLink = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
@@ -278,7 +269,7 @@ export const verifyEmail = asyncHandler (async (req, res) => {
 // User Verifizierung
 
 export const verifyUser = asyncHandler (async (req, res) => {
-  const {verificationToken} = req.params;
+  const { verificationToken } = req.params;
 
   if (!verificationToken) {
     return res.status (400).json ({message: 'Ungültiger Token'});
@@ -348,12 +339,28 @@ export const forgotPassword = asyncHandler (async (req, res) => {
   // Reset token hashen
   const hashedToken = hashToken(passwordResetToken);
 
-  await new Token({
+  // await new Token({
+  //   userId: user._id,
+  //   passwordResetToken: hashedToken,
+  //   createdAt: Date.now(),
+  //   expiresAt: Date.now() + 60 * 60 * 1000, // 1 Stunde 
+  // }).save();
+
+  // neuen Token erstellen
+  const newToken = new Token({
     userId: user._id,
-    token: hashedToken,
+    verificationToken: passwordResetToken,
+    passwordResetToken: hashedToken,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 60 * 60 * 1000, // 1 Stunde 
-  }).save();
+    expiresAt: Date.now() + 60 * 60 * 1000, // 1 Stunde
+  })
+
+  try {
+    await newToken.save();
+  } catch (error) {
+    console.log('Fehler beim Erstellen des Tokens...', error);
+    return res.status(500).json ({ message: 'Fehler beim Erstellen des Tokens' });
+  }
 
   // Reset link erstellen
   const resetLink = `${process.env.CLIENT_URL}/reset-password/${passwordResetToken}`;
@@ -361,10 +368,9 @@ export const forgotPassword = asyncHandler (async (req, res) => {
   // Dem User eine E-Mail senden
   const subject = 'Automatisch: Passwort vergessen?';
   const send_to = user.email;
-  const sent_from = process.env.USER_EMAIL;
+  const send_from = process.env.USER_EMAIL;
   const reply_to = 'noreply@gmail.com';
   const template = 'forgotPassword';
-  const send_from = process.env.USER_EMAIL;
   const name = user.name;
   const url = resetLink;
 
@@ -409,4 +415,58 @@ export const resetPassword = asyncHandler (async (req, res) => {
     expiresAt: {$gt: Date.now()},
   });
 
+  if (!userToken) {
+    return res
+      .status(400)
+      .json({ message: 'Abgelaufener Token. Bitte Registrierung neu starten!' });
+  }
+
+  // user mit ID aus der Datenbank auswerten
+  const user = await User.findById(userToken.userId);
+
+  // update password des users
+  user.password = password;
+  await user.save();
+
+  res
+  .status(200)
+  .json ({ message: 'Passwort wurde erfolgreich geändert' });
+
+});
+
+// Password ändern
+export const changePassword = asyncHandler (async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ message: 'Füge dein aktuelles und neues Passwort hinzu' });
+  }
+
+  // user mit ID aus der Datenbank auswerten
+
+  const user = await User.findById(req.user._id);
+
+  // vergleiche aktuelles Passwort mit dem in der Datenbank gespeicherten Passwort
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+  if (!isMatch) {
+    return res
+    .status (400)
+    .json ({ message: 'Falsches Passwort. Bitte versuche es erneut!' });
+  }
+
+  // Passwort des Nutzers zurücksetzen
+  if (isMatch) {
+    user.password = newPassword;
+    await user.save();
+    return res
+    .status (200)
+    .json ({ message: 'Passwort wurde erfolgreich geändert' });
+  } else {
+    return res
+    .status (400)
+    .json ({ message: 'Falsches Passwort. Bitte versuche es erneut!' });
+  }
 });

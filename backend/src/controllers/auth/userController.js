@@ -299,4 +299,16 @@ export const verifyUser = asyncHandler (async (req, res) => {
       .status (400)
       .json ({message: 'Abgelaufener Token. Bitte Registrierung neu starten!'});
   }
+
+  // user mit ID aus der Datenbank auswerten
+  const user = await User.findOne (userToken.userId);
+  if (user.isVerified) {
+    // 400 Bad Request
+    return res.status(400).json ({message: 'Account ist bereits verifiziert'});
+  }
+
+  // user mit ID aus der Datenbank aktualisieren
+  user.isVerified = true;
+  await user.save ();
+  res.status (200).json ({message: 'Account wurde erfolgreich verifiziert'});
 });

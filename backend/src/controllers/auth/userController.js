@@ -3,6 +3,10 @@ import User from '../../models/auth/userModel.js';
 import generateToken from '../../helpers/generateToken.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import Token from '../../models/auth/Token.js';
+import crypto from 'node:crypto';
+import hashToken from '../../helpers/hashToken.js';
+import sendEmail from '../../helpers/sendEmail.js';
 
 export const registerUser = asyncHandler (async (req, res) => {
   const {name, email, password} = req.body;
@@ -184,8 +188,115 @@ export const userLoginStatus = asyncHandler (async (req, res) => {
   const decoded = jwt.verify (token, process.env.JWT_SECRET);
 
   if (decoded) {
-    res.status (200).json(true);
+    res.status (200).json (true);
   } else {
-    res.status (401).json(false);
+    res.status (401).json (false);
+  }
+});
+
+// email verification
+
+export const verifyEmail = asyncHandler (async (req, res) => {
+  const user = await User.findById (req.user._id);
+
+  // check ob user existiert
+  if (!user) {
+    res.status (404).json ({message: 'User nicht gefunden'});
+  }
+
+  // check ob Email bereits verifiziert wurde
+  if (user.isVerified) {
+    res.status (400).json ({message: 'Email ist bereits verifiziert'});
+  }
+
+  let token = await Token.findOne ({userID: user._id});
+
+  // check ob token existiert ---> token löschen
+  if (token) {
+    await token.deleteOne ();
+  }
+
+  // erstellen eines verifizierungs tokens --> crypto
+  const verificationToken = crypto.randomBytes (64).toString ('hex') + user._id;
+
+  // hash des verifizierungs tokens
+  const hashedToken = hashToken (verificationToken);
+
+  console.log (`generated Token: ${verificationToken}`);
+  console.log (`hashed Token: ${hashedToken}`);
+
+  await new Token ({
+    userId: user._id,
+    verificationToken: hashedToken,
+    createdAt: Date.now (),
+    // 24 Stunden in Millisekunden // 24 Stunden * 60 Minuten * 60 Sekunden * 1000 Millisekunden = 86400000 Millisekunden
+    expiresAt: Date.now () + 24 * 60 * 60 * 1000,
+  }); //.save ();
+
+  // try {
+  //   const savedToken = await newToken.save();
+  //   console.log('Token saved:', savedToken);
+  // } catch (error) {
+  //   console.error('Error saving token:', error);
+  //   return res.status(500).json({ message: 'Fehler beim Speichern des Tokens' });
+  // }
+
+  // verification link
+  const verificationLink = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+
+  // send email
+  const subject = 'Automatisch: Bitte bestätige deine E-Mail Adresse!';
+  const send_to = user.email;
+  const reply_to = 'noreply@gmail.com;';
+  const template = 'emailVerification';
+  const send_from = process.env.USER_EMAIL;
+  const name = user.name;
+  const url = verificationLink;
+
+  try {
+    // Reihenfolge ist wichtig
+    await sendEmail (
+      subject,
+      send_to,
+      send_from,
+      reply_to,
+      template,
+      name,
+      url
+    );
+    return res.json ({
+      message: 'E-Mail wurde versendet. Bitte bestätige deine E-Mail!',
+    });
+  } catch (error) {
+    console.log ('Fehler beim Senden der E-Mail...', error);
+    return res
+      .status (500)
+      .json ({message: 'Email konnte nicht versendet werden'});
+  }
+});
+
+// User Verifizierung
+
+export const verifyUser = asyncHandler (async (req, res) => {
+  const {verificationToken} = req.params;
+
+  if (!verificationToken) {
+    return res.status (400).json ({message: 'Ungültiger Token'});
+  }
+
+  // hash des verifizierungs tokens --> hashed vor dem vergleichen
+  const hashedToken = hashToken (verificationToken);
+
+  // finde user mit dem verifizierungs token aus der Datenbank
+  const userToken = await Token.findOne ({
+    verificationToken: hashedToken,
+    // check ob der verifizierungs token abgelaufen ist
+    expiresAt: {$gt: Date.now ()},
+  });
+
+  if (!userToken) {
+    return res
+      .status (400)
+      .json ({message: 'Abgelaufener Token. Bitte Registrierung neu starten!'});
   }
 });

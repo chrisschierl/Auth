@@ -1,11 +1,13 @@
 import express from 'express';
 import {
+  getUser,
   loginUser,
   logoutUser,
   registerUser,
-  getUser,
   updateUser,
   userLoginStatus,
+  verifyEmail,
+  verifyUser,
 } from '../controllers/auth/userController.js';
 import {
   adminMiddleware,
@@ -34,5 +36,12 @@ router.get ('/admin/users', protect, creatorMiddleware, getAllUsers);
 
 // login status
 router.get ('/login-status', userLoginStatus);
+
+// Email Verifizierung
+router.post('/verify-email', protect, verifyEmail);
+
+// verify user ---> Email verifizieren
+router.post("/verify-user/:verificationToken", verifyUser);
+
 
 export default router;

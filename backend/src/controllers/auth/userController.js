@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import User from '../../models/auth/userModel.js';
 import generateToken from '../../helpers/generateToken.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 export const registerUser = asyncHandler (async (req, res) => {
   const {name, email, password} = req.body;
@@ -75,24 +76,20 @@ export const loginUser = asyncHandler (async (req, res) => {
   // Validation
   if (!email || !password) {
     return res
-    .status (400)
-    .json ({message: 'Füge deine Email und Passwort hinzu'});
+      .status (400)
+      .json ({message: 'Füge deine Email und Passwort hinzu'});
   }
 
   // check if user exists
   const userExists = await User.findOne ({email});
   if (!userExists) {
-    return res
-    .status (404)
-    .json ({message: 'Dieser Account existiert nicht!'});
+    return res.status (404).json ({message: 'Dieser Account existiert nicht!'});
   }
   // Check ob Passwort übereinstimmt mit der Datenbank
   const isMatch = await bcrypt.compare (password, userExists.password);
 
   if (!isMatch) {
-    return res
-    .status (401)
-    .json ({message: 'Falsches Passwort!'});
+    return res.status (401).json ({message: 'Falsches Passwort!'});
   }
 
   // generate token with ID
@@ -122,9 +119,7 @@ export const loginUser = asyncHandler (async (req, res) => {
       token,
     });
   } else {
-    res
-    .status (400)
-    .json ({message: 'Fehler beim Einloggen!'});
+    res.status (400).json ({message: 'Fehler beim Einloggen!'});
   }
 });
 
@@ -140,38 +135,57 @@ export const getUser = asyncHandler (async (req, res) => {
   // get user details from token ---> OHNE PASSWROT!
   const user = await User.findById (req.user._id).select ('-password');
 
-  if (!user) {
+  if (user) {
     res.status (200).json (user);
   } else {
     res.status (404).json ({message: 'User nicht gefunden!'});
   }
 });
 
-
 // update user
 export const updateUser = asyncHandler (async (req, res) => {
-    // get user details from token ---> Protect middleware
-    const user = await User.findById (req.user._id);
-    if (user) {
-        // user properties update
-        const {name, photo, bio} = req.body;
-        // update user
-        user.name = req.body.name || user.name;
-        user.photo = req.body.photo || user.photo;
-        user.bio = req.body.bio || user.bio;
+  // get user details from token ---> Protect middleware
+  const user = await User.findById (req.user._id);
+  if (user) {
+    // user properties update
+    const {name, photo, bio} = req.body;
+    // update user
+    user.name = req.body.name || user.name;
+    user.photo = req.body.photo || user.photo;
+    user.bio = req.body.bio || user.bio;
 
-        const updated = await user.save ();
+    const updated = await user.save ();
 
-        res.status(200).json({
-            _id: updated._id,
-            name: updated.name,
-            email: updated.email,
-            role: updated.role,
-            photo: updated.photo,
-            bio: updated.bio,
-            isVerified: updated.isVerified,
-        });
-    } else {
-        res.status(404).json({message: 'User nicht gefunden!'});
-    }
-})
+    res.status (200).json ({
+      _id: updated._id,
+      name: updated.name,
+      email: updated.email,
+      role: updated.role,
+      photo: updated.photo,
+      bio: updated.bio,
+      isVerified: updated.isVerified,
+    });
+  } else {
+    res.status (404).json ({message: 'User nicht gefunden!'});
+  }
+});
+
+// login status
+
+export const userLoginStatus = asyncHandler (async (req, res) => {
+  const token = req.cookies.token;
+
+  if (!token) {
+    // 401 Unauthorized
+    return res.status (401).json ({message: 'Du musst angemeldet sein'});
+  }
+
+  // token auswerten
+  const decoded = jwt.verify (token, process.env.JWT_SECRET);
+
+  if (decoded) {
+    res.status (200).json(true);
+  } else {
+    res.status (401).json(false);
+  }
+});

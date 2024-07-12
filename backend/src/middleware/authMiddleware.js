@@ -20,7 +20,7 @@ export const protect = asyncHandler (async (req, res, next) => {
 
     // check if user exists
     if (!user) {
-      res.status (404).json ({message: 'User not found'});
+      res.status (404).json ({message: 'Nutzer nicht gefunden'});
     }
 
     // set user details in req object
@@ -45,11 +45,11 @@ export const adminMiddleware = asyncHandler (async (req, res, next) => {
 });
 
 export const creatorMiddleware = asyncHandler (async (req, res, next) => {
-  if (
-    req.user &&
-    req.user.role === 'creator' &&
-    req.user && 
-    req.user.role === 'admin'
+  if (    
+    
+    (req.user && req.user.role === 'creator') ||
+    (req.user && req.user.role === 'admin' )
+
   ) {
     // if user is admin continue
     next ();

@@ -19,9 +19,9 @@ export const deleteUser = asynchandler (async (req, res) => {
 
 // get all users
 export const getAllUsers = asynchandler (async (req, res) => {
-
   try {
     const users = await User.find ();
+    
     if (!users) {
       res.status (404).json ({message: 'Keine User gefunden'});
     }

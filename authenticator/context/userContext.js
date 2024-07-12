@@ -10,7 +10,7 @@ export const UserContextProvider = ({children}) => {
 
   const router = useRouter ();
 
-  const [user, setUser] = useState (null);
+  const [user, setUser] = useState ({});
   const [userState, setUserState] = useState ({
     name: '',
     email: '',
@@ -75,8 +75,9 @@ export const UserContextProvider = ({children}) => {
         password: '',
       });
 
+
       // push user ins dashboard
-      router.push ('/dashboard');
+      router.push ('/');
     } catch (error) {
       console.log ('Fehler beim Login', error);
       toast.error (error.response.data.message);
@@ -99,10 +100,29 @@ export const UserContextProvider = ({children}) => {
         router.push ('/login');
       }
     } catch (error) {
-    console.log("Fehler bei Statusabfrage", error);
-    toast.error (error.response.data.message);
+      console.log ('Fehler bei Statusabfrage', error);
+    }
+
+    return loggedIn;
+  };
+
+   // logout user
+   const logoutUser = async () => {
+    try {
+      const res = await axios.get(`${serverUrl}/api/v1/logout`, {
+        withCredentials: true, // send cookies to the server
+      });
+
+      toast.success("User logged out successfully");
+
+      // redirect to login page
+      router.push("/login");
+    } catch (error) {
+      console.log("Error logging out user", error);
+      toast.error(error.response.data.message);
     }
   };
+
 
   // dynamiischer form handler
   const handlerUserInput = name => e => {
@@ -114,6 +134,10 @@ export const UserContextProvider = ({children}) => {
     }));
   };
 
+  useEffect (() => {
+    userLoginStatus ();
+  }, []);
+
   return (
     <UserContext.Provider
       value={{
@@ -121,6 +145,9 @@ export const UserContextProvider = ({children}) => {
         userState,
         handlerUserInput,
         loginUser,
+        logoutUser,
+        userLoginStatus,
+        user,
       }}
     >
       {children}

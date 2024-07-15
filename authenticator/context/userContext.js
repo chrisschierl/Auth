@@ -1,9 +1,12 @@
 import axios from 'axios';
 import {useRouter} from 'next/navigation';
-import React, {createContext, useEffect, useState, useContext} from 'react';
+import React, {useEffect, useState, useContext} from 'react';
 import toast from 'react-hot-toast';
 
 const UserContext = React.createContext ();
+
+// axios credentials
+axios.defaults.withCredentials = true;
 
 export const UserContextProvider = ({children}) => {
   const serverUrl = 'http://localhost:8000';
@@ -11,13 +14,14 @@ export const UserContextProvider = ({children}) => {
   const router = useRouter ();
 
   const [user, setUser] = useState ({});
+  const [allUsers, setAllUsers] = useState ([]);
   const [userState, setUserState] = useState ({
     name: '',
     email: '',
     password: '',
   });
 
-  const [loading, setLoading] = useState (true);
+  const [loading, setLoading] = useState (false);
 
   // register user
   const registerUser = async e => {
@@ -35,6 +39,7 @@ export const UserContextProvider = ({children}) => {
 
     try {
       const res = await axios.post (`${serverUrl}/api/v1/register`, userState);
+      console.log ('Registrierung erfolgreich', res.data);
       toast.success ('Registrierung erfolgreich');
 
       // clear the form
@@ -75,6 +80,8 @@ export const UserContextProvider = ({children}) => {
         password: '',
       });
 
+      // refresh user dteails
+      await getUser (); // fetch user vor dem redirect
 
       // push user ins dashboard
       router.push ('/');
@@ -84,7 +91,7 @@ export const UserContextProvider = ({children}) => {
     }
   };
 
-  // get logged in users
+  // get logged in status
   const userLoginStatus = async () => {
     let loggedIn = false;
     try {
@@ -93,7 +100,7 @@ export const UserContextProvider = ({children}) => {
       });
 
       // cors string zu boolean umwandeln
-      loggedIn = !!res.data.user;
+      loggedIn = !!res.data;
       setLoading (false);
 
       if (!loggedIn) {
@@ -106,23 +113,72 @@ export const UserContextProvider = ({children}) => {
     return loggedIn;
   };
 
-   // logout user
-   const logoutUser = async () => {
+  // logout user
+  const logoutUser = async () => {
     try {
-      const res = await axios.get(`${serverUrl}/api/v1/logout`, {
+      const res = await axios.get (`${serverUrl}/api/v1/logout`, {
         withCredentials: true, // send cookies to the server
       });
 
-      toast.success("User logged out successfully");
+      toast.success ('Erfolgreich ausgeloggt!');
 
       // redirect to login page
-      router.push("/login");
+      router.push ('/login');
     } catch (error) {
-      console.log("Error logging out user", error);
-      toast.error(error.response.data.message);
+      console.log ('Error logging out user', error);
+      toast.error (error.response.data.message);
     }
   };
 
+  // get user details
+  const getUser = async () => {
+    try {
+      const res = await axios.get (`${serverUrl}/api/v1/user`, {
+        withCredentials: true, // send cookies zum server
+      });
+
+      setUser (prevState => {
+        return {
+          ...prevState,
+          ...res.data,
+        };
+      });
+
+      setLoading (false);
+    } catch (error) {
+      console.log ('Error getting user', error);
+      setLoading (false);
+      toast.error (error.response.data.message);
+    }
+  };
+
+  // update user details
+  const updateUser = async (e, data) => {
+    e.preventDefault ()
+    setLoading(true)
+
+    try {
+      const res = await axios.patch(`${serverUrl}/api/v1/user`, data, {
+        withCredentials: true // send cookies zum server
+      })
+
+      // update user state
+      setUser(prevState => {
+        return {
+          ...prevState,
+          ...res.data
+        }
+      })
+
+      toast.success('Bio erfolgreich aktualisiert!')
+
+      setLoading(false)
+    } catch (error) {
+      console.log('Fehler beim Updaten!', error)
+      setLoading(false)
+      toast.error(error.response.data.message)
+    }
+  }
 
   // dynamiischer form handler
   const handlerUserInput = name => e => {
@@ -135,7 +191,15 @@ export const UserContextProvider = ({children}) => {
   };
 
   useEffect (() => {
-    userLoginStatus ();
+    const loginStatusGetUser = async () => {
+      const isLoggedIn = await userLoginStatus ();
+
+      if (isLoggedIn) {
+        await getUser ();
+      }
+    };
+
+    loginStatusGetUser ();
   }, []);
 
   return (
@@ -148,6 +212,7 @@ export const UserContextProvider = ({children}) => {
         logoutUser,
         userLoginStatus,
         user,
+        updateUser,
       }}
     >
       {children}

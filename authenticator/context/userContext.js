@@ -154,31 +154,52 @@ export const UserContextProvider = ({children}) => {
 
   // update user details
   const updateUser = async (e, data) => {
-    e.preventDefault ()
-    setLoading(true)
+    e.preventDefault ();
+    setLoading (true);
 
     try {
-      const res = await axios.patch(`${serverUrl}/api/v1/user`, data, {
-        withCredentials: true // send cookies zum server
-      })
+      const res = await axios.patch (`${serverUrl}/api/v1/user`, data, {
+        withCredentials: true, // send cookies zum server
+      });
 
       // update user state
-      setUser(prevState => {
+      setUser (prevState => {
         return {
           ...prevState,
-          ...res.data
-        }
-      })
+          ...res.data,
+        };
+      });
 
-      toast.success('Bio erfolgreich aktualisiert!')
+      toast.success ('Bio erfolgreich aktualisiert!');
 
-      setLoading(false)
+      setLoading (false);
     } catch (error) {
-      console.log('Fehler beim Updaten!', error)
-      setLoading(false)
-      toast.error(error.response.data.message)
+      console.log ('Fehler beim Updaten!', error);
+      setLoading (false);
+      toast.error (error.response.data.message);
     }
-  }
+  };
+
+  // email verification
+  const emailVerification = async () => {
+    setLoading (true);
+    try {
+      const res = await axios.post (
+        `${serverUrl}/api/v1/verify-email`,
+        {},
+        {
+          withCredentials: true, // send cookies zum server
+        }
+      );
+
+      toast.success('Email zur Bestätigung gesendet!');
+      setLoading (false);
+    } catch (error) {
+      console.log("Fehler beim Senden der Bestätigung", error);
+      setLoading (false);
+      toast.error(error.response.data.message);
+    }
+  };
 
   // dynamiischer form handler
   const handlerUserInput = name => e => {
@@ -213,6 +234,7 @@ export const UserContextProvider = ({children}) => {
         userLoginStatus,
         user,
         updateUser,
+        emailVerification,
       }}
     >
       {children}

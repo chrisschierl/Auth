@@ -35,7 +35,7 @@ export default function Home() {
           )}
           <button
             onClick={logoutUser}
-            className="px-3 py-2 bg-red-400 text-white rounded-md"
+            className="px-3 py-2 bg-red-500 text-white rounded-md"
           >
             Ausloggen
           </button>

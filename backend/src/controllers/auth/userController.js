@@ -339,13 +339,6 @@ export const forgotPassword = asyncHandler (async (req, res) => {
   // Reset token hashen
   const hashedToken = hashToken(passwordResetToken);
 
-  // await new Token({
-  //   userId: user._id,
-  //   passwordResetToken: hashedToken,
-  //   createdAt: Date.now(),
-  //   expiresAt: Date.now() + 60 * 60 * 1000, // 1 Stunde 
-  // }).save();
-
   // neuen Token erstellen
   const newToken = new Token({
     userId: user._id,

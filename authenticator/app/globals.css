@@ -2,14 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-/* .auth-page2 {
-  height: 100vh;
-  background: url("../public/123691.png") no-repeat center center fixed;
-  background-size: cover;
-  position: relative;
-} */
-
 .auth-page {
   height: 100vh;
   background: linear-gradient(135deg, rgba(13, 60, 169, 0.847), #72b4ff, #f19a0cdc);

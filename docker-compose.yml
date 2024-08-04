@@ -1,19 +1,27 @@
 services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - NODE_ENV=development
+    networks:
+      - mynetwork
+
   authenticator:
     build:
       context: ./authenticator
     ports:
       - "3000:3000"
-      - "8000:8000"
     volumes:
       - ./authenticator:/app
-    depends_on:
-      - backend
+    environment:
+      - NODE_ENV=development
+    networks:
+      - mynetwork
 
-  backend:
-    build:
-      context: ./backend
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./backend:/app
+networks:
+  mynetwork:

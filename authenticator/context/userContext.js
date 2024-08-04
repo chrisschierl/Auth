@@ -9,7 +9,7 @@ const UserContext = React.createContext ();
 axios.defaults.withCredentials = true;
 
 export const UserContextProvider = ({children}) => {
-  const serverUrl = 'http://localhost:8000';
+  const serverUrl = 'http://3.125.124.128:8000';
 
   const router = useRouter ();
 

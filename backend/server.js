@@ -6,52 +6,53 @@ import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import errorHandler from './src/helpers/errorhandler.js';
 
-dotenv.config ();
+// Lade Umgebungsvariablen
+dotenv.config();
 
 const port = process.env.PORT || 8000;
 
-const app = express ();
+const app = express();
 
-// middleware
-app.use (
-  cors ({
-    origin: process.env.CLIENT_URL,
+// Middleware für CORS
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || '*', // Verwende die URL deines Frontends, um CORS-Anfragen zu erlauben
     credentials: true,
   })
 );
 
-app.use (express.json ());
-app.use (express.urlencoded ({extended: true}));
-app.use (cookieParser ());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// error handler middleware
+// Fehlerbehandlungs-Middleware
 app.use(errorHandler);
 
-// routes
-const routeFiles = fs.readdirSync ('./src/routes');
+// Dynamisch importierte Routen
+const routeFiles = fs.readdirSync('./src/routes');
 
-routeFiles.forEach (file => {
-  // use dynamic import
-  import (`./src/routes/${file}`)
-    .then (route => {
-      app.use ('/api/v1', route.default);
+routeFiles.forEach(file => {
+  // Verwende dynamisches Importieren der Routen
+  import(`./src/routes/${file}`)
+    .then(route => {
+      app.use('/api/v1', route.default);
     })
-    .catch ((err) => {
-      console.log ('Failed to load route file', err);
+    .catch(err => {
+      console.log('Failed to load route file', err);
     });
 });
 
 const server = async () => {
   try {
-    await connect ();
+    await connect();
 
-    app.listen (port, () => {
-      console.log (`Server started on port ${port}`);
+    app.listen(port, () => {
+      console.log(`Server started on port ${port}`);
     });
   } catch (error) {
-    console.log ('Failed to start server...', error.message);
-    process.exit (1);
+    console.log('Failed to start server...', error.message);
+    process.exit(1);
   }
 };
 
-server ();
+server();
